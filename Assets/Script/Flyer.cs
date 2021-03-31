@@ -4,76 +4,159 @@ using UnityEngine;
 
 public class Flyer : MonoBehaviour
 {
+    //attributes
+    public float[] chromosome = new float[7];
+    public bool dead = false; int flaps = 0; int maxflaps = -1;
     Wing leftwing, rightwing;
-    Transform body;
-    float leftwingLength, leftwingWidth, leftwingflaptimer, leftwingThickness;
-    float rightwingLength, rightwingWidth, rightwingflaptimer, rightwingThickness;
-    float bodyDiameter;
+    Transform body; 
+    float leftwingflaptimer, rightwingflaptimer;
     bool leftflapped = false, rightflapped = false;
+
+    // statistics
+    public float maxHeight = 0.0f;
+
+    public enum Gene
+    {
+        LeftWingLength = 0,
+        RightWingLength = 1,
+        LeftWingWidth = 2,
+        BodyDiameter = 3,
+        RightWingWidth = 4,
+        LeftWingThickness = 5,
+        RightWingThickness = 6
+    }
 
     // Start is called before the first frame update
     void Start()
     {
-        leftwing = this.transform.Find("LeftWing").GetComponent<Wing>();
-        rightwing = this.transform.Find("RightWing").GetComponent<Wing>();
-        body = this.transform.Find("Body");
-        init();
     }
 
-    public void init(float leftwingLength = 1.0f, float rightwingLength = 1.0f, float leftwingWidth = 1.0f, float bodyDiameter = 1.0f, float rightwingWidth = 1.0f, float leftwingThickness = 1.0f, float rightwingThickness = 1.0f)
+
+    public void init(float leftwingLength = 1.0f, float rightwingLength = 1.0f, float leftwingWidth = 1.0f, float bodyDiameter = 1.0f, float rightwingWidth = 1.0f, float leftwingThickness = 2.0f, float rightwingThickness = 2.0f)
     {
+        this.dead = false;
+        this.leftwing = this.transform.Find("LeftWing").GetComponent<Wing>(); this.leftwing.transform.localPosition = new Vector3(-bodyDiameter / 2, 0, 0);
+        //this.leftwing.GetComponent<HingeJoint>().connectedAnchor = new Vector3(-bodyDiameter / 2, 0, 0);
+        this.rightwing = this.transform.Find("RightWing").GetComponent<Wing>(); this.rightwing.transform.localPosition = new Vector3(bodyDiameter / 2, 0, 0);
+       // this.rightwing.GetComponent<HingeJoint>().connectedAnchor = new Vector3(bodyDiameter / 2, 0, 0);
+        body = this.transform.Find("Body");
+
         //left wing
-        this.leftwingLength = leftwingLength;
-        this.leftwingWidth = leftwingWidth;
-        this.leftwingThickness = leftwingThickness;
-        leftwing.animSpeed = leftwingThickness;
-        leftwing.transform.localScale = new Vector3(leftwingLength, leftwingThickness, 1f);
+        this.chromosome[(int)Gene.LeftWingLength] = leftwingLength;
+        this.chromosome[(int)Gene.LeftWingWidth] = leftwingWidth;
+        this.chromosome[(int)Gene.LeftWingThickness] = leftwingThickness;
+        this.leftwing.wingThickness = leftwingThickness;
+        this.leftwing.transform.localScale = new Vector3(leftwingLength, leftwingThickness/2.5f, leftwingWidth);
 
         //right wing
-        this.rightwingLength = rightwingLength;
-        this.rightwingWidth = rightwingWidth;
-        this.rightwingThickness = rightwingThickness;
-        rightwing.animSpeed = rightwingThickness;
-        rightwing.transform.localScale = new Vector3(rightwingLength, rightwingThickness, 1f);
+        this.chromosome[(int)Gene.RightWingLength] = rightwingLength;
+        this.chromosome[(int)Gene.RightWingWidth] = rightwingWidth;
+        this.chromosome[(int)Gene.RightWingThickness] = rightwingThickness;
+        this.rightwing.wingThickness = rightwingThickness;
+        this.rightwing.transform.localScale = new Vector3(rightwingLength, rightwingThickness/2.5f, rightwingWidth);
 
         //body
-        this.bodyDiameter = bodyDiameter;
+        this.chromosome[(int)Gene.BodyDiameter] = bodyDiameter;
         this.body.localScale = Vector3.one * bodyDiameter; //set Flyer body size
-        this.GetComponent<Rigidbody>().mass = (Mathf.Pow(bodyDiameter/2, 3)*Mathf.PI*4.0f/3.0f + leftwingLength * leftwingWidth * leftwingThickness + rightwingLength * rightwingWidth * rightwingThickness); //calculate mass
+        int flapsPerDiameter = 20;
+        maxflaps = (int)(bodyDiameter * flapsPerDiameter);
+ 
+
+        //calculate and set masses
+        this.GetComponent<Rigidbody>().mass = (Mathf.Pow(bodyDiameter/2, 3)*Mathf.PI*4.0f/3.0f) + leftwingLength * leftwingWidth * leftwingThickness/2 + rightwingLength * rightwingWidth * rightwingThickness/2; //calculate body mass
+
     }
 
     // Update is called once per frame
     void Update()
     {
-        /*
-         * TODO: IMPLEMENT
+        /**
+         * STATISTICS
          */
-        leftwingflaptimer -= Time.deltaTime;
-        rightwingflaptimer -= Time.deltaTime;
-
-        if (!leftflapped && leftwingflaptimer <= leftwingThickness / 4f)
+        if(this.transform.position.y > maxHeight)
         {
-            leftwing.Flap(leftwingLength * leftwingWidth); //Flap force proportional to wing area
+            maxHeight = this.transform.position.y;
+        }
+
+        if (dead) return;
+
+        /**
+         * FLAP WINGS
+         */
+        leftwingflaptimer += Time.deltaTime;
+        rightwingflaptimer += Time.deltaTime;
+
+        //flap left wing
+        if (!leftflapped && leftwingflaptimer >= 3*this.leftwing.GetFlapPeriod() / 4f)
+        {
+            this.leftwing.Flap(this.GetLeftWingLength() * this.GetLeftWingWidth()); //Flap force proportional to wing area
+            flaps++;
+            if(flaps >= maxflaps)
+            {
+                dead = true;
+                EvolutionManager.singleton.FlyerDied();
+            }
             leftflapped = true;
         }
 
-        if (leftwingflaptimer <= 0.0f)
+        if (leftwingflaptimer >= this.leftwing.GetFlapPeriod())
         {
-            leftwingflaptimer = leftwingThickness;
+            leftwingflaptimer = 0.0f;
             leftflapped = false;
         }
 
-        if (!rightflapped && rightwingflaptimer <= rightwingThickness / 4f)
+        //flap right wing
+        if (!rightflapped && rightwingflaptimer >= 3 * this.rightwing.GetFlapPeriod() / 4f)
         {
-            rightwing.Flap(rightwingLength * rightwingWidth); //Flap force proportional to wing area
+            this.rightwing.Flap(this.GetRightWingLength() * this.GetRightWingWidth()); //Flap force proportional to wing area
+            flaps++;
+            if (flaps >= maxflaps)
+            {
+                dead = true;
+                EvolutionManager.singleton.FlyerDied();
+            }
             rightflapped = true;
         }
 
-        if (rightflapped && rightwingflaptimer <= 0.0f)
+
+        if (rightflapped && rightwingflaptimer >= this.rightwing.GetFlapPeriod())
         {
-            rightwingflaptimer = rightwingThickness;
+            rightwingflaptimer = 0.0f;
             rightflapped = false;
         }
 
     }
+
+    /**
+     * CHROMOSOME GETTER FUNCTIONS
+     */
+    public float GetLeftWingLength()
+    {   
+        return(this.chromosome[(int)Gene.LeftWingLength]);
+    }
+    public float GetRightWingLength()
+    {   
+        return(this.chromosome[(int)Gene.RightWingLength]);
+    }   
+    public float GetLeftWingWidth()
+    {   
+        return(this.chromosome[(int)Gene.LeftWingWidth]);
+    }
+    public float GetBodyDiameter()
+    {   
+        return(this.chromosome[(int)Gene.BodyDiameter]);
+    }
+    public float GetRightWingWidth()
+    {   
+        return(this.chromosome[(int)Gene.RightWingWidth]);
+    }
+    public float GetLeftWingThickness()
+    {   
+        return(this.chromosome[(int)Gene.LeftWingThickness]);
+    }
+     public float GetRightWingThickness()
+    {   
+        return(this.chromosome[(int)Gene.RightWingThickness]);
+    }
 }
+
