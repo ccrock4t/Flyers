@@ -6,13 +6,14 @@ using UnityEngine;
 public class EvolutionManager : MonoBehaviour
 {
     public static EvolutionManager singleton;
+    public static float maxGeneValue = 10f;
     public float highScore = 0.0f;
     public GameObject HighestMarker;
     public GameObject prefabFlyer;
     int numberOfTopFlyersToBreed = 4; //breed the top 4 flyers
     int numberPerGeneration;
     int numberOfDead = 0;
-    List<Flyer> currentGeneration = new List<Flyer>();
+    public List<Flyer> currentGeneration = new List<Flyer>();
     float spawnNextGenerationTimer;
 
 
@@ -115,7 +116,7 @@ public class EvolutionManager : MonoBehaviour
                 chromosome[(int)Flyer.Gene.LeftWingThickness],
                 chromosome[(int)Flyer.Gene.RightWingThickness]);
 
-            flyerObject.transform.position = new Vector3(idx*4-numberPerGeneration*2, flyer.GetBodyDiameter(), 0);
+            flyerObject.transform.position = new Vector3(idx*4-numberPerGeneration*2, flyer.transform.Find("Body").localScale.y, 0);
             idx++;
         }
 
@@ -160,16 +161,15 @@ public class EvolutionManager : MonoBehaviour
             currentGeneration.Add(flyer);
 
             float minGeneValue = 0.0f;
-            float maxGeneValue = 5.0f;
-            flyer.init(UnityEngine.Random.Range(minGeneValue, maxGeneValue),
-                UnityEngine.Random.Range(minGeneValue, maxGeneValue), 
-                UnityEngine.Random.Range(minGeneValue, maxGeneValue), 
-                UnityEngine.Random.Range(minGeneValue, maxGeneValue), 
-                UnityEngine.Random.Range(minGeneValue, maxGeneValue), 
-                UnityEngine.Random.Range(minGeneValue, maxGeneValue), 
-                UnityEngine.Random.Range(minGeneValue, maxGeneValue));
+            flyer.init(UnityEngine.Random.Range(minGeneValue, EvolutionManager.maxGeneValue),
+                UnityEngine.Random.Range(minGeneValue, EvolutionManager.maxGeneValue), 
+                UnityEngine.Random.Range(minGeneValue, EvolutionManager.maxGeneValue), 
+                UnityEngine.Random.Range(minGeneValue, EvolutionManager.maxGeneValue), 
+                UnityEngine.Random.Range(minGeneValue, EvolutionManager.maxGeneValue), 
+                UnityEngine.Random.Range(minGeneValue, EvolutionManager.maxGeneValue), 
+                UnityEngine.Random.Range(minGeneValue, EvolutionManager.maxGeneValue));
 
-            flyerObject.transform.position = new Vector3(i * 4 - numberPerGeneration * 2, flyer.GetBodyDiameter(), 0);
+            flyerObject.transform.position = new Vector3(i * 4 - numberPerGeneration * 2, flyer.transform.Find("Body").localScale.y/2, 0);
      
         }
     }

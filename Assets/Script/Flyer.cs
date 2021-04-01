@@ -32,38 +32,56 @@ public class Flyer : MonoBehaviour
     }
 
 
+    //attribute values are between 0 and EvolutionManager.maxGeneValue
     public void init(float leftwingLength = 1.0f, float rightwingLength = 1.0f, float leftwingWidth = 1.0f, float bodyDiameter = 1.0f, float rightwingWidth = 1.0f, float leftwingThickness = 2.0f, float rightwingThickness = 2.0f)
     {
         this.dead = false;
-        this.leftwing = this.transform.Find("LeftWing").GetComponent<Wing>(); this.leftwing.transform.localPosition = new Vector3(-bodyDiameter / 2, 0, 0);
-        //this.leftwing.GetComponent<HingeJoint>().connectedAnchor = new Vector3(-bodyDiameter / 2, 0, 0);
-        this.rightwing = this.transform.Find("RightWing").GetComponent<Wing>(); this.rightwing.transform.localPosition = new Vector3(bodyDiameter / 2, 0, 0);
-       // this.rightwing.GetComponent<HingeJoint>().connectedAnchor = new Vector3(bodyDiameter / 2, 0, 0);
+        float wingScaleOffset = 0.1f;
+        float wingScale = 0.5f;
+
+        float bodyScaleOffset = 0.5f;
+        float bodyScale = 0.05f;
+        float scaledBodyDiameter = (bodyDiameter * bodyScale + bodyScaleOffset);
+
+        this.leftwing = this.transform.Find("LeftWing").GetComponent<Wing>(); this.leftwing.transform.localPosition = new Vector3(-scaledBodyDiameter / 2, 0, 0);
+        this.rightwing = this.transform.Find("RightWing").GetComponent<Wing>(); this.rightwing.transform.localPosition = new Vector3(scaledBodyDiameter / 2, 0, 0);
         body = this.transform.Find("Body");
+        body.transform.gameObject.GetComponent<Renderer>().material.color = new Color((bodyDiameter + leftwingLength) / (EvolutionManager.maxGeneValue*2), (bodyDiameter + rightwingLength) / (EvolutionManager.maxGeneValue*2), (rightwingThickness + leftwingThickness + bodyDiameter) / (EvolutionManager.maxGeneValue*3));
+
 
         //left wing
         this.chromosome[(int)Gene.LeftWingLength] = leftwingLength;
         this.chromosome[(int)Gene.LeftWingWidth] = leftwingWidth;
         this.chromosome[(int)Gene.LeftWingThickness] = leftwingThickness;
         this.leftwing.wingThickness = leftwingThickness;
-        this.leftwing.transform.localScale = new Vector3(leftwingLength, leftwingThickness/2.5f, leftwingWidth);
+        
+        this.leftwing.transform.localScale = new Vector3(leftwingLength * 0.5f * wingScale + wingScaleOffset, leftwingThickness * 0.1f * wingScale + wingScaleOffset, leftwingWidth * wingScale + wingScaleOffset);
+        this.leftwing.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.color = new Color((leftwingLength/10), (leftwingThickness / 10), (leftwingWidth / 10));
 
         //right wing
         this.chromosome[(int)Gene.RightWingLength] = rightwingLength;
         this.chromosome[(int)Gene.RightWingWidth] = rightwingWidth;
         this.chromosome[(int)Gene.RightWingThickness] = rightwingThickness;
         this.rightwing.wingThickness = rightwingThickness;
-        this.rightwing.transform.localScale = new Vector3(rightwingLength, rightwingThickness/2.5f, rightwingWidth);
+        this.rightwing.transform.localScale = new Vector3(rightwingLength * 0.5f * wingScale + wingScaleOffset, rightwingThickness * 0.1f * wingScale + wingScaleOffset, rightwingWidth * wingScale + wingScaleOffset);
+        this.rightwing.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.color = new Color((rightwingLength / EvolutionManager.maxGeneValue), (rightwingThickness / EvolutionManager.maxGeneValue), (rightwingWidth / EvolutionManager.maxGeneValue));
 
         //body
         this.chromosome[(int)Gene.BodyDiameter] = bodyDiameter;
-        this.body.localScale = Vector3.one * bodyDiameter; //set Flyer body size
-        int flapsPerDiameter = 20;
-        maxflaps = (int)(bodyDiameter * flapsPerDiameter);
+        this.body.localScale = Vector3.one * (bodyDiameter *2* bodyScale + bodyScaleOffset); ; //set Flyer body size
+        int flapsPerDiameter = 2;
+        maxflaps = (int)(bodyDiameter * flapsPerDiameter) + 25;
  
 
         //calculate and set masses
-        this.GetComponent<Rigidbody>().mass = (Mathf.Pow(bodyDiameter/2, 3)*Mathf.PI*4.0f/3.0f) + leftwingLength * leftwingWidth * leftwingThickness/2 + rightwingLength * rightwingWidth * rightwingThickness/2; //calculate body mass
+        this.GetComponent<Rigidbody>().mass = (Mathf.Pow(bodyDiameter, 3)*Mathf.PI*4.0f/3.0f)/20f
+            + (leftwingLength) 
+            * (leftwingWidth )
+            * (leftwingThickness)
+            + (rightwingLength)
+            * (rightwingWidth)
+            * (rightwingThickness); //calculate body mass
+        this.GetComponent<Rigidbody>().mass = this.GetComponent<Rigidbody>().mass / (40 * EvolutionManager.maxGeneValue) + .5f;
 
     }
 

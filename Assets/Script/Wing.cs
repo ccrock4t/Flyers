@@ -6,7 +6,7 @@ public class Wing : MonoBehaviour
 {
     public Rigidbody parentRB;
     public Flyer parentFlyer;
-    float baseFlapPeriod = 2.0f;
+    float baseFlapPeriod = 0.2f;
     public float wingThickness = 0.0f, animtimer = 0.0f;
     Vector3 startpos, endpos;
     Quaternion startrot, endrot;
@@ -47,12 +47,11 @@ public class Wing : MonoBehaviour
 
     public float GetFlapPeriod()
     {
-        return (baseFlapPeriod / wingThickness);
+        return (baseFlapPeriod / (wingThickness/5)) + 0.1f;
     }
 
     public void Flap(float force)
     {
-        Debug.Log("flap" + GetFlapPeriod());
-        parentRB.AddForce(new Vector3(0, force*400.0f));
+        parentRB.AddRelativeForce(new Vector3(0, force*3f + 5f));
     }
 }
