@@ -2,26 +2,33 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class EvolutionManager : MonoBehaviour
 {
     public static EvolutionManager singleton;
-    public static float maxGeneValue = 10f;
+    public static float maxGeneValue = 4.0f;
+    public static float minGeneValue = 0.1f;
+    public static float mutationRate = 0.15f; 
     public float highScore = 0.0f;
     public GameObject HighestMarker;
     public GameObject prefabFlyer;
     int numberOfTopFlyersToBreed = 4; //breed the top 4 flyers
-    int numberPerGeneration;
-    int numberOfDead = 0;
+    public int numberPerGeneration;
+    public int numberOfDead = 0;
     public List<Flyer> currentGeneration = new List<Flyer>();
     float spawnNextGenerationTimer;
+    int currentGenerationNumber = 0;
+
+    //UI
+    public Text uitext;
 
 
     // Start is called before the first frame update
     void Start()
     {
         singleton = this;
-        numberPerGeneration = numberOfTopFlyersToBreed * (numberOfTopFlyersToBreed - 1);
+        numberPerGeneration = numberOfTopFlyersToBreed * (numberOfTopFlyersToBreed - 1) + numberOfTopFlyersToBreed;
 
         SpawnInitialGeneration();
     }
@@ -34,6 +41,7 @@ public class EvolutionManager : MonoBehaviour
             spawnNextGenerationTimer -= Time.deltaTime;
             if (spawnNextGenerationTimer <= 0f) { 
                 FinalizeCurrentGeneration();
+                spawnNextGenerationTimer = 3.0f;
             }
         }
     }
@@ -91,17 +99,41 @@ public class EvolutionManager : MonoBehaviour
             {
                 if(i != j) //breed them if they are different Flyers
                 {
-                    (float[] offspring1, float[] offspring2) = SinglePointCrossover(topFlyersChromosomes[i],topFlyersChromosomes[j]);
-                    //(float[] offspring1, float[] offspring2) = DoublePointCrossover();
-                    //(float[] offspring1, float[] offspring2) = UniformCrossover();
-                   // nextGenerationChromosomes.Add(offspring1);
-                    //nextGenerationChromosomes.Add(offspring2);
+                    //(float[] offspring1, float[] offspring2) = SinglePointCrossover(topFlyersChromosomes[i],topFlyersChromosomes[j]);
+                    //(float[] offspring1, float[] offspring2) = TwoPointCrossover(topFlyersChromosomes[i], topFlyersChromosomes[j]);
+                    (float[] offspring1, float[] offspring2) = UniformCrossover(topFlyersChromosomes[i],topFlyersChromosomes[j]);
+
+                    //mutations
+                    for (int k = 0; k < 7; k++)
+                    {
+                        //offspring 1
+                        int random = UnityEngine.Random.Range(1, 101); //between 1 and 10
+                        if (random <= (100 * mutationRate))
+                        {
+                            //Gene was selected for mutation!
+                            offspring1[k] = UnityEngine.Random.Range(EvolutionManager.minGeneValue, EvolutionManager.maxGeneValue);
+                        }
+
+                        //offspring 2
+                        random = UnityEngine.Random.Range(1, 101); //between 1 and 10
+                        if (random <= (100 * mutationRate))
+                        {
+                            //Gene was selected for mutation!
+                            offspring2[k] = UnityEngine.Random.Range(EvolutionManager.minGeneValue, EvolutionManager.maxGeneValue);
+                        }
+                    }
+
+
+                    nextGenerationChromosomes.Add(offspring1);
+                    nextGenerationChromosomes.Add(offspring2);
                 }
             }
             nextGenerationChromosomes.Add(topFlyersChromosomes[i]);
         }
 
-        //then spawn everyone in the next generation using their chromosomes
+        //SPAWN NEXT GENERATION
+        //spawn everyone in the next generation using their chromosomes
+        this.currentGenerationNumber++;
         idx = 0;
         foreach(float[] chromosome in nextGenerationChromosomes)
         {
@@ -116,35 +148,113 @@ public class EvolutionManager : MonoBehaviour
                 chromosome[(int)Flyer.Gene.LeftWingThickness],
                 chromosome[(int)Flyer.Gene.RightWingThickness]);
 
-            flyerObject.transform.position = new Vector3(idx*4-numberPerGeneration*2, flyer.transform.Find("Body").localScale.y, 0);
+            flyerObject.transform.position = new Vector3(GetSpawnXPosition(idx), flyer.body.transform.localScale.y/2f, 0);
             idx++;
         }
 
         numberOfDead = 0;
+
+        updateUIText();
     }
 
     (float[], float[]) SinglePointCrossover(float[] parentAchromosome, float[] parentBchromosome)
     {
+        //randomly select a point on the chromosome to be the crossover point
         float[] offspring1 = new float[7];
         float[] offspring2 = new float[7];
-        //Todo - Checkpoint 3
+        int point = UnityEngine.Random.Range(1,7);
+        for (int i = 0; i < 7; i++)
+        {
+            if (i < point)
+            {
+               offspring1[i] = parentAchromosome[i];
+               offspring2[i] = parentBchromosome[i]; 
+            }
+            if (i >= point)
+            {
+              offspring1[i] = parentBchromosome[i];
+              offspring2[i] = parentAchromosome[i];  
+            }
+        }
+        
         return (offspring1, offspring2);
     }
 
     (float[], float[]) TwoPointCrossover(float[] parentAchromosome, float[] parentBchromosome)
     {
+        //randomly select two points and crossover the genome at that point 
         float[] offspring1 = new float[7];
         float[] offspring2 = new float[7];
-        //Todo - Checkpoint 3
+        int point1 = UnityEngine.Random.Range(1, 7);
+        int point2 = UnityEngine.Random.Range(1, 7);
+
+        //make sure that point1 and point2 are not the same 
+        while (point1 == point2)
+        {
+            point2 = UnityEngine.Random.Range(1, 7);
+        }
+
+        if(point1 > point2)
+        {
+            //point2 must always be greater than point1, so swap them
+            int temp = point2;
+            point2 = point1;
+            point1 = temp;
+        }
+
+        for (int i = 0; i < 7; i++)
+        {
+            if (i < point1 || i >= point2)
+            {
+                offspring1[i] = parentAchromosome[i];
+                offspring2[i] = parentBchromosome[i];
+            }else
+            {
+                offspring1[i] = parentBchromosome[i];
+                offspring2[i] = parentAchromosome[i];
+            }
+        }
+        
         return (offspring1, offspring2);
     }
 
 
     (float[], float[]) UniformCrossover(float[] parentAchromosome, float[] parentBchromosome)
     {
+        //select each part of the chromosome from either parent with equal probability 
         float[] offspring1 = new float[7];
         float[] offspring2 = new float[7];
-        //Todo - Checkpoint 3
+        
+        //create offspring 1
+        for (int i = 0; i < 7; i++)
+        {
+            int parent = UnityEngine.Random.Range(0, 2); //which parent to grab from?
+            if (parent == 0)
+            {
+                offspring1[i] = parentAchromosome[i];
+              
+            } 
+            if (parent == 1)
+            {
+                offspring1[i] = parentBchromosome[i];
+            } 
+        }
+
+        //create offspring 2
+        for (int i = 0; i < 7; i++)
+        {
+            int parent = UnityEngine.Random.Range(0, 2); //which parent to grab from?
+            if (parent == 0)
+            {
+                offspring2[i] = parentAchromosome[i];
+              
+            } 
+            if (parent == 1)
+            {
+                offspring2[i] = parentBchromosome[i];
+            }
+        }
+
         return (offspring1, offspring2);
     }
 
@@ -152,26 +262,39 @@ public class EvolutionManager : MonoBehaviour
     //Spawn the initial generation
     void SpawnInitialGeneration()
     {
+        this.currentGenerationNumber = 1;
         numberOfDead = 0;
-        spawnNextGenerationTimer = 1.0f;
+        spawnNextGenerationTimer = 3.0f;
         for (int i=0; i < numberPerGeneration; i++)
         {
             GameObject flyerObject = Instantiate(prefabFlyer);
             Flyer flyer = flyerObject.GetComponent<Flyer>();
             currentGeneration.Add(flyer);
 
-            float minGeneValue = 0.0f;
-            flyer.init(UnityEngine.Random.Range(minGeneValue, EvolutionManager.maxGeneValue),
-                UnityEngine.Random.Range(minGeneValue, EvolutionManager.maxGeneValue), 
-                UnityEngine.Random.Range(minGeneValue, EvolutionManager.maxGeneValue), 
-                UnityEngine.Random.Range(minGeneValue, EvolutionManager.maxGeneValue), 
-                UnityEngine.Random.Range(minGeneValue, EvolutionManager.maxGeneValue), 
-                UnityEngine.Random.Range(minGeneValue, EvolutionManager.maxGeneValue), 
-                UnityEngine.Random.Range(minGeneValue, EvolutionManager.maxGeneValue));
+            flyer.init(UnityEngine.Random.Range(EvolutionManager.minGeneValue, EvolutionManager.maxGeneValue),
+                UnityEngine.Random.Range(EvolutionManager.minGeneValue, EvolutionManager.maxGeneValue), 
+                UnityEngine.Random.Range(EvolutionManager.minGeneValue, EvolutionManager.maxGeneValue), 
+                UnityEngine.Random.Range(EvolutionManager.minGeneValue, EvolutionManager.maxGeneValue), 
+                UnityEngine.Random.Range(EvolutionManager.minGeneValue, EvolutionManager.maxGeneValue), 
+                UnityEngine.Random.Range(EvolutionManager.minGeneValue, EvolutionManager.maxGeneValue), 
+                UnityEngine.Random.Range(EvolutionManager.minGeneValue, EvolutionManager.maxGeneValue));
 
-            flyerObject.transform.position = new Vector3(i * 4 - numberPerGeneration * 2, flyer.transform.Find("Body").localScale.y/2, 0);
+            flyerObject.transform.position = new Vector3(GetSpawnXPosition(i), flyer.body.transform.localScale.y/2f, 0);
      
         }
+
+        updateUIText();
+    }
+
+    void updateUIText()
+    {
+        uitext.text = "Generation: #" + this.currentGenerationNumber
+           + "\n" + "Current Best: " + this.highScore + " meters" ;
+    }
+
+    float GetSpawnXPosition(int idx)
+    {
+        return (idx * 2 - numberPerGeneration);
     }
 
     public class FlyerSorter : IComparer<Flyer>

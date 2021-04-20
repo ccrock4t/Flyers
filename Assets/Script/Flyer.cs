@@ -8,7 +8,7 @@ public class Flyer : MonoBehaviour
     public float[] chromosome = new float[7];
     public bool dead = false; int flaps = 0; int maxflaps = -1;
     Wing leftwing, rightwing;
-    Transform body; 
+    public Transform body; 
     float leftwingflaptimer, rightwingflaptimer;
     bool leftflapped = false, rightflapped = false;
 
@@ -36,17 +36,20 @@ public class Flyer : MonoBehaviour
     public void init(float leftwingLength = 1.0f, float rightwingLength = 1.0f, float leftwingWidth = 1.0f, float bodyDiameter = 1.0f, float rightwingWidth = 1.0f, float leftwingThickness = 2.0f, float rightwingThickness = 2.0f)
     {
         this.dead = false;
+
+        //scaling purely for aesthetics
         float wingScaleOffset = 0.1f;
         float wingScale = 0.5f;
 
+        //scaling purely for aesthetics
         float bodyScaleOffset = 0.5f;
         float bodyScale = 0.05f;
         float scaledBodyDiameter = (bodyDiameter * bodyScale + bodyScaleOffset);
 
         this.leftwing = this.transform.Find("LeftWing").GetComponent<Wing>(); this.leftwing.transform.localPosition = new Vector3(-scaledBodyDiameter / 2, 0, 0);
         this.rightwing = this.transform.Find("RightWing").GetComponent<Wing>(); this.rightwing.transform.localPosition = new Vector3(scaledBodyDiameter / 2, 0, 0);
-        body = this.transform.Find("Body");
-        body.transform.gameObject.GetComponent<Renderer>().material.color = new Color((bodyDiameter + leftwingLength) / (EvolutionManager.maxGeneValue*2), (bodyDiameter + rightwingLength) / (EvolutionManager.maxGeneValue*2), (rightwingThickness + leftwingThickness + bodyDiameter) / (EvolutionManager.maxGeneValue*3));
+        this.body = this.transform.Find("Body");
+        this.body.transform.gameObject.GetComponent<Renderer>().material.color = new Color((bodyDiameter + leftwingLength) / (EvolutionManager.maxGeneValue*2), (bodyDiameter + rightwingLength) / (EvolutionManager.maxGeneValue*2), (rightwingThickness + leftwingThickness + bodyDiameter) / (EvolutionManager.maxGeneValue*3));
 
 
         //left wing
@@ -69,8 +72,9 @@ public class Flyer : MonoBehaviour
         //body
         this.chromosome[(int)Gene.BodyDiameter] = bodyDiameter;
         this.body.localScale = Vector3.one * (bodyDiameter *2* bodyScale + bodyScaleOffset); ; //set Flyer body size
-        int flapsPerDiameter = 2;
-        maxflaps = (int)(bodyDiameter * flapsPerDiameter) + 25;
+        float flapsPerDiameter = 1.5f;
+        int baseFlaps = 15;
+        maxflaps = (int)(bodyDiameter * flapsPerDiameter) + baseFlaps;
  
 
         //calculate and set masses
@@ -122,6 +126,8 @@ public class Flyer : MonoBehaviour
             leftwingflaptimer = 0.0f;
             leftflapped = false;
         }
+
+        if (dead) return;
 
         //flap right wing
         if (!rightflapped && rightwingflaptimer >= 3 * this.rightwing.GetFlapPeriod() / 4f)

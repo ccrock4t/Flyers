@@ -52,6 +52,7 @@ public class Wing : MonoBehaviour
 
     public void Flap(float force)
     {
-        parentRB.AddRelativeForce(new Vector3(0, force*3f + 5f));
+        float totalforce = force*12f + 20f;
+        parentRB.AddForceAtPosition(parentRB.transform.up * totalforce, this.transform.Find("Wing").position);
     }
 }
