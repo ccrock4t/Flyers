@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,7 +10,7 @@ public class EvolutionManager : MonoBehaviour
     public static EvolutionManager singleton;
     public static float maxGeneValue = 4.0f;
     public static float minGeneValue = 0.1f;
-    public static float mutationRate = 0.15f; 
+    public static float mutationRate = 0.2f; 
     public float highScore = 0.0f;
     public GameObject HighestMarker;
     public GameObject prefabFlyer;
@@ -23,7 +24,9 @@ public class EvolutionManager : MonoBehaviour
     //UI
     public Text uitext;
 
-
+    //file
+    StreamWriter statisticsFile;
+        
     // Start is called before the first frame update
     void Start()
     {
@@ -31,6 +34,18 @@ public class EvolutionManager : MonoBehaviour
         numberPerGeneration = numberOfTopFlyersToBreed * (numberOfTopFlyersToBreed - 1) + numberOfTopFlyersToBreed;
 
         SpawnInitialGeneration();
+
+        statisticsFile = new StreamWriter("statistics.txt", true);
+        
+    }
+
+    private void OnApplicationQuit()
+    {
+        statisticsFile.WriteLine("=====================================================");
+        statisticsFile.WriteLine("+++++++++++++++++++++++++++++++++++++++++++++++++++++");
+        statisticsFile.WriteLine("=====================================================");
+        statisticsFile.WriteLine("OVERALL HIGH SCORE: " + highScore);
+        statisticsFile.Close();
     }
 
     // Update is called once per frame
@@ -57,11 +72,17 @@ public class EvolutionManager : MonoBehaviour
      */
     void FinalizeCurrentGeneration()
     {
+        statisticsFile.WriteLine("========================================");
+        statisticsFile.WriteLine("GENERATION #" + currentGenerationNumber + " STATISTICS");
+        statisticsFile.WriteLine("========================================");
+        statisticsFile.WriteLine("Rating,Chromosome,MaxHeight,WillReproduce?");
+
         currentGeneration.Sort(new FlyerSorter()); //sort by max height achieved
         float currentGenerationMaxHeight = 0.0f;
 
-        // Set high score stastics, and gather the top flyers - they will survive to the next generation and interbreed
+        // Get high score stastics, and gather the top flyers - they will survive to the next generation and interbreed
         int idx = 0;
+        float thisGenHighScore = 0;
         List<float[]> topFlyersChromosomes = new List<float[]>();
         foreach (Flyer flyer in currentGeneration)
         {
@@ -74,14 +95,29 @@ public class EvolutionManager : MonoBehaviour
                 highScore = flyer.maxHeight;
                 HighestMarker.transform.position = new Vector3(0, highScore, 0); //set the red bar if high score is exceeded
             }
+            if(flyer.maxHeight > thisGenHighScore)
+            {
+                thisGenHighScore = flyer.maxHeight;
+            }
 
+            string reproducesString = "";
             if(idx < numberOfTopFlyersToBreed)
             {
                 Debug.Log(flyer.maxHeight);
                 topFlyersChromosomes.Add(flyer.chromosome);
+                reproducesString = "TOP FLYER - REPRODUCES";
             }
             idx++;
+
+            string chromosomeString = "";
+            foreach(float f in flyer.chromosome)
+            {
+                chromosomeString += (f + ",");
+            }
+            statisticsFile.WriteLine(idx + "," + chromosomeString + flyer.maxHeight + "," + reproducesString);
         }
+
+        statisticsFile.WriteLine("THIS GENERATION'S HIGH SCORE: " + thisGenHighScore);
 
         //DESTROY the current generation
         foreach (Flyer flyer in currentGeneration)
@@ -122,7 +158,6 @@ public class EvolutionManager : MonoBehaviour
                             offspring2[k] = UnityEngine.Random.Range(EvolutionManager.minGeneValue, EvolutionManager.maxGeneValue);
                         }
                     }
-
 
                     nextGenerationChromosomes.Add(offspring1);
                     nextGenerationChromosomes.Add(offspring2);
